@@ -11,8 +11,26 @@ class HomePage extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateTime = useStream(getTime());
+    // final dateTime = useStream(getTime());
 
-    return Scaffold(appBar: AppBar(title: Text(dateTime.data ?? "Home Page")));
+    final controller = useTextEditingController();
+    final text = useState('');
+
+    useEffect(() {
+      controller.addListener(() {
+        text.value = controller.text;
+      });
+      return null;
+    }, [controller]);
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Home Page")),
+      body: Column(
+        children: [
+          TextField(controller: controller),
+          Text("You Typed ${text.value}"),
+        ],
+      ),
+    );
   }
 }
