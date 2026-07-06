@@ -1,7 +1,9 @@
-import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+
+import '../enums.dart';
 
 // Stream<String> getTime() => Stream.periodic(
 //   const Duration(seconds: 1),
@@ -29,11 +31,46 @@ const url = 'https://images.unsplash.com/photo-1544085311-11a028465b03';
 //   }
 // }
 
+@immutable
+class State {
+  final double rotationDeg;
+  final double alpha;
+
+  const State({required this.rotationDeg, required this.alpha});
+
+  const State.zero() : rotationDeg = 0.0, alpha = 1.0;
+
+  State rotateRight() => State(rotationDeg: rotationDeg + 10.0, alpha: alpha);
+  State rotateLeft() => State(rotationDeg: rotationDeg - 10.0, alpha: alpha);
+
+  State increaseAlpha() =>
+      State(rotationDeg: rotationDeg, alpha: min(alpha + 0.1, 1.0));
+
+  State decreaseAlpha() =>
+      State(rotationDeg: rotationDeg, alpha: max(alpha - 0.1, 0.0));
+}
+
+State reducer(State oldState, MyAction? action) {
+  switch (action) {
+    case null:
+      return oldState;
+    case MyAction.rotateLeft:
+      return oldState.rotateLeft();
+    case MyAction.rotateRight:
+      return oldState.rotateRight();
+    case MyAction.moreVisible:
+      return oldState.increaseAlpha();
+    case MyAction.lessVisible:
+      return oldState.decreaseAlpha();
+  }
+}
+
 class HomePage extends HookWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final state = useAppLifecycleState();
     // final dateTime = useStream(getTime());
 
     // final controller = useTextEditingController();
@@ -82,35 +119,89 @@ class HomePage extends HookWidget {
     //   return null;
     // }, [controller]);
 
-    late StreamController<double> controller;
+    // late StreamController<double> controller;
+    //
+    // controller = useStreamController(
+    //   onListen: () {
+    //     controller.sink.add(0.0);
+    //   },
+    // );
 
-    controller = useStreamController(
-      onListen: () {
-        controller.sink.add(0.0);
-      },
+    final store = useReducer<State, MyAction?>(
+      reducer,
+      initialState: const State.zero(),
+      initialAction: null,
     );
 
     return Scaffold(
       appBar: AppBar(title: Text("Home Page")),
-      body: StreamBuilder<double>(
-        stream: controller.stream,
-        builder: (context, asyncSnapshot) {
-          if (!asyncSnapshot.hasData) {
-            return const CircularProgressIndicator();
-          } else {
-            final rotation = asyncSnapshot.data ?? 0.0;
-            return GestureDetector(
-              onTap: () {
-                controller.sink.add(rotation + 10.0);
-              },
-              child: RotationTransition(
-                turns: AlwaysStoppedAnimation(rotation / 360.0),
-                child: Center(child: Image.network(url)),
+      body: Column(
+        children: [
+          Wrap(
+            children: [
+              Row(
+                mainAxisAlignment: .center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      store.dispatch(MyAction.rotateLeft);
+                    },
+                    child: Text("Rotate Left", style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      store.dispatch(MyAction.rotateRight);
+                    },
+                    child: Text("Rotate Right", style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      store.dispatch(MyAction.lessVisible);
+                    },
+                    child: Text("Less Visible", style: TextStyle(fontSize: 12)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      store.dispatch(MyAction.moreVisible);
+                    },
+                    child: Text("More Visible", style: TextStyle(fontSize: 12)),
+                  ),
+                ],
               ),
-            );
-          }
-        },
+            ],
+          ),
+          SizedBox(height: 100),
+          Opacity(
+            opacity: state == AppLifecycleState.resumed
+                ? store.state.alpha
+                : 0.0,
+            child: RotationTransition(
+              turns: AlwaysStoppedAnimation(store.state.rotationDeg / 360.0),
+              child: Image.network(url),
+            ),
+          ),
+        ],
       ),
+
+      // body: StreamBuilder<double>(
+      //   stream: controller.stream,
+      //   builder: (context, asyncSnapshot) {
+      //     if (!asyncSnapshot.hasData) {
+      //       return const CircularProgressIndicator();
+      //     } else {
+      //       final rotation = asyncSnapshot.data ?? 0.0;
+      //       return GestureDetector(
+      //         onTap: () {
+      //           controller.sink.add(rotation + 10.0);
+      //         },
+      //         child: RotationTransition(
+      //           turns: AlwaysStoppedAnimation(rotation / 360.0),
+      //           child: Center(child: Image.network(url)),
+      //         ),
+      //       );
+      //     }
+      //   },
+      // ),
       // body: Column(
       //   children: [
       //     SizeTransition(
