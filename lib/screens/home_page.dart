@@ -1,8 +1,7 @@
-import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:testing_flutter_hooks/extensions/normalize_num.dart';
 
 // Stream<String> getTime() => Stream.periodic(
 //   const Duration(seconds: 1),
@@ -10,7 +9,7 @@ import 'package:testing_flutter_hooks/extensions/normalize_num.dart';
 // );
 
 const url = 'https://images.unsplash.com/photo-1544085311-11a028465b03';
-const imageHeight = 300.0;
+// const imageHeight = 300.0;
 
 // class CountDown extends ValueNotifier {
 //   late StreamSubscription sub;
@@ -58,54 +57,82 @@ class HomePage extends HookWidget {
     // final countDown = useMemoized(() => CountDown(from: 20));
     // final notifier = useListenable(countDown);
 
-    final opacity = useAnimationController(
-      duration: Duration(seconds: 1),
-      initialValue: 1.0,
-      lowerBound: 0.0,
-      upperBound: 1.0,
+    // final opacity = useAnimationController(
+    //   duration: Duration(seconds: 1),
+    //   initialValue: 1.0,
+    //   lowerBound: 0.0,
+    //   upperBound: 1.0,
+    // );
+
+    // final size = useAnimationController(
+    //   duration: Duration(seconds: 1),
+    //   initialValue: 1.0,
+    //   upperBound: 1.0,
+    //   lowerBound: 0.0,
+    // );
+    // final controller = useScrollController();
+
+    // useEffect(() {
+    //   controller.addListener(() {
+    //     final newOpacity = max(imageHeight - controller.offset, 0.0);
+    //     final normalize = newOpacity.normalize(0.0, imageHeight).toDouble();
+    //     opacity.value = normalize;
+    //     size.value = normalize;
+    //   });
+    //   return null;
+    // }, [controller]);
+
+    late StreamController<double> controller;
+
+    controller = useStreamController(
+      onListen: () {
+        controller.sink.add(0.0);
+      },
     );
 
-    final size = useAnimationController(
-      duration: Duration(seconds: 1),
-      initialValue: 1.0,
-      upperBound: 1.0,
-      lowerBound: 0.0,
-    );
-    final controller = useScrollController();
-
-    useEffect(() {
-      controller.addListener(() {
-        final newOpacity = max(imageHeight - controller.offset, 0.0);
-        final normalize = newOpacity.normalize(0.0, imageHeight).toDouble();
-        opacity.value = normalize;
-        size.value = normalize;
-      });
-      return null;
-    }, [controller]);
     return Scaffold(
       appBar: AppBar(title: Text("Home Page")),
-      body: Column(
-        children: [
-          SizeTransition(
-            sizeFactor: size,
-            axis: Axis.vertical,
-            alignment: Alignment.center,
-            child: FadeTransition(
-              opacity: opacity,
-              child: Image.network(url, height: imageHeight, fit: BoxFit.cover),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: controller,
-              itemCount: 100,
-              itemBuilder: (context, index) {
-                return ListTile(title: Text("Person ${index + 1}"));
+      body: StreamBuilder<double>(
+        stream: controller.stream,
+        builder: (context, asyncSnapshot) {
+          if (!asyncSnapshot.hasData) {
+            return const CircularProgressIndicator();
+          } else {
+            final rotation = asyncSnapshot.data ?? 0.0;
+            return GestureDetector(
+              onTap: () {
+                controller.sink.add(rotation + 10.0);
               },
-            ),
-          ),
-        ],
+              child: RotationTransition(
+                turns: AlwaysStoppedAnimation(rotation / 360.0),
+                child: Center(child: Image.network(url)),
+              ),
+            );
+          }
+        },
       ),
+      // body: Column(
+      //   children: [
+      //     SizeTransition(
+      //       sizeFactor: size,
+      //       axis: Axis.vertical,
+      //       alignment: Alignment.center,
+      //       child: FadeTransition(
+      //         opacity: opacity,
+      //         child: Image.network(url, height: imageHeight, fit: BoxFit.cover),
+      //       ),
+      //     ),
+      //     Expanded(
+      //       child: ListView.builder(
+      //         controller: controller,
+      //         itemCount: 100,
+      //         itemBuilder: (context, index) {
+      //           return ListTile(title: Text("Person ${index + 1}"));
+      //         },
+      //       ),
+      //     ),
+      //   ],
+      // ),
       // body: Center(child: Text(notifier.value.toString())),
       //Column(
       // children: [
